@@ -1,0 +1,30 @@
+{
+    "name": "BenchmarkIt!",
+    "description": "BenchmarkIt! is a browser extension to find CPU/GPU benchmark scores on the webpage.",
+    "version": "1.0",
+    "manifest_version": 3,
+    "icons": {
+        "128": "icon.png"
+    },
+    "action": {
+        "default_title": "BenchmarkIt!"
+    },
+    "content_scripts": [
+        {
+          "js": ["content/detectProduct.js", "content/appendButton.js", "content/showInfo.js", "content/init.js"],
+          "matches": ["<all_urls>"],
+          "all_frames": true
+        }
+    ],
+    "background":{
+        "scripts":["background.js"],
+        "type": "module"
+    },
+    "permissions": ["tabs", "storage"],
+    "host_permissions": ["<all_urls>"],
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "BenchmarkIt@FoxRefire"
+        }
+    }
+}
