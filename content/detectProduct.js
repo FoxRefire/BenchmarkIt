@@ -18,6 +18,7 @@ const PRODUCT_PATTERNS = {
         /core\s+ultra\s+\d+\s+\d+[a-z]*/i,
         /core\s+ultra\s+\d+\s+プロセッサー\s+\d+[a-z]*/i,
         /core\s+ultra\s+\d+\s+processor\s+\d+[a-z]*/i,
+        /i[3-9]-\d+[a-z]*/i,
         /pentium\s+g\d+/i,
         /celeron\s+g\d+/i,
         /xeon\s+e\d+/i,
@@ -82,7 +83,9 @@ const PRODUCT_PATTERNS = {
         
         // AMD patterns
         /amd\s+radeon\s+(rx|hd|r[3-9])\s*\d+[a-z]*/i,
+        /amd\s+radeon\s+\d+[a-z]*/i,
         /radeon\s+(rx|hd|r[3-9])\s*\d+[a-z]*/i,
+        /radeon\s+\d+[a-z]*/i,
         /rx\s*\d+[a-z]*/i,
         /hd\s*\d+[a-z]*/i,
         /r[3-9]\s*\d+[a-z]*/i,
@@ -141,7 +144,7 @@ function normalizeText(text) {
         .toLowerCase()
         .replace(/[™®©]/g, '') // Remove trademark symbols
         .replace(/\s+/g, ' ') // Normalize whitespace
-        .replace(/[-_]/g, ' ') // Replace hyphens and underscores with spaces
+        .replace(/[_]/g, ' ') // Replace underscores with spaces (keep hyphens for processor names)
         .trim();
 }
 
