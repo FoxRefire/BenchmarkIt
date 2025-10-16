@@ -1,10 +1,14 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "getBenchmark") {
-        console.log('getBenchmark called with:', request.selectedStr, request.productType);
-        getResult(request.selectedStr, request.productType).then(result => {
-            console.log('getResult result:', result);
-            sendResponse(result);
-        });
+    if(chrome.offscreen) {
+        offscreenRun(request).then(d => sendResponse(d))
+    } else {
+        if (request.action === "getBenchmark") {
+            console.log('getBenchmark called with:', request.selectedStr, request.productType);
+            getResult(request.selectedStr, request.productType).then(result => {
+                console.log('getResult result:', result);
+                sendResponse(result);
+            });
+        }
     }
     return true;
 });
@@ -22,6 +26,17 @@ async function getResult(text, productType) {
             passmark: passmark
         };
     }
+}
+
+async function offscreenRun(request) {
+    await chrome.offscreen.createDocument({
+        url: '/background/offscreen.html',
+        reasons: ['WORKERS'],
+        justification: 'Workaround of using the DOM on Chromium service worker'
+    })
+    let result = await chrome.runtime.sendMessage(request)
+    await chrome.offscreen.closeDocument()
+    return result
 }
 
 // Function to normalize text for better matching
@@ -51,11 +66,13 @@ async function extractFirstLinkFromDuckDuckGo(query) {
 }
 
 async function getCPUPassmark(text) {
-    let response;
-    response = await fetch("https://www.cpubenchmark.net/cpu.php?cpu=" + encodeURIComponent(text));
+    let response, url;
+    url = "https://www.cpubenchmark.net/cpu.php?cpu=" + encodeURIComponent(text);
+    response = await fetch(url);
     if (!response.ok) {
         text = await getProductLinkByDDG(text, "cpubenchmark").then(u => u.match(/cpu\.php\?cpu=(.*)/)?.[1]);
-        response = await fetch(`https://www.cpubenchmark.net/cpu.php?cpu=${text}`);
+        url = `https://www.cpubenchmark.net/cpu.php?cpu=${text}`;
+        response = await fetch(url);
     }
     response = await response.text();
     const parser = new DOMParser();
@@ -64,17 +81,19 @@ async function getCPUPassmark(text) {
         productName: doc.querySelector("div.productheader h1")?.innerText,
         multiCoreScore: doc.querySelector("div.right-desc > div:nth-child(3)")?.innerText,
         singleCoreScore: doc.querySelector("div.right-desc > div:nth-child(5)")?.innerText,
+        url: url
     };
 }
 
 async function getGPUPassmark(text) {
-    let response;
-    response = await fetch("https://www.videocardbenchmark.net/gpu.php?gpu=" + encodeURIComponent(text));
-    console.log('response:', response);
+    let response, url;
+    url = "https://www.videocardbenchmark.net/gpu.php?gpu=" + encodeURIComponent(text);
+    response = await fetch(url);
+
     if (!response.ok || !response.url.includes("gpu.php")) {
         let gpuId = await findGpuIdFromGPUList(text);
-        console.log('gpuId:', gpuId);
-        response = await fetch(`https://www.videocardbenchmark.net/gpu.php?id=${gpuId}`);
+        url = `https://www.videocardbenchmark.net/gpu.php?id=${gpuId}`;
+        response = await fetch(url);
     }
     response = await response.text();
     const parser = new DOMParser();
@@ -82,6 +101,7 @@ async function getGPUPassmark(text) {
     return {
         productName: doc.querySelector(".main-cmps-head h1")?.innerText,
         score: doc.querySelector("div.right-desc > span:nth-child(3)")?.innerText,
+        url: url
     };
 }
 

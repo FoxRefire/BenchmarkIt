@@ -17,7 +17,7 @@
         }
     ],
     "background":{
-        "scripts":["background.js"],
+        "scripts":["background/background.js"],
         "type": "module"
     },
     "permissions": ["tabs", "storage"],

@@ -62,6 +62,7 @@ function showModernModal(data, productType) {
     
     const productName = data.passmark.productName || 'Unknown Product';
     const passmark = data.passmark || {};
+    const passmarkUrl = passmark.url || 'https://www.cpubenchmark.net/';
     
     let scoreContent = '';
     if (productType === 'cpu') {
@@ -100,7 +101,7 @@ function showModernModal(data, productType) {
                         ${scoreContent}
                     </div>
                     <div class="benchmarkit-footer">
-                        <a href="https://www.cpubenchmark.net/" target="_blank" class="benchmarkit-link">
+                        <a href="${passmarkUrl}" target="_blank" class="benchmarkit-link">
                             View Details on PassMark
                         </a>
                     </div>
