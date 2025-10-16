@@ -92,7 +92,7 @@ function showModernModal(data, productType) {
             <div class="benchmarkit-modal-content">
                 <div class="benchmarkit-modal-header">
                     <h3>${productName}</h3>
-                    <button class="benchmarkit-close-btn" onclick="closeBenchmarkModal()">×</button>
+                    <button class="benchmarkit-close-btn" id="benchmarkit-close-btn">×</button>
                 </div>
                 <div class="benchmarkit-modal-body">
                     <div class="benchmarkit-product-type">${productType.toUpperCase()}</div>
@@ -115,26 +115,34 @@ function showModernModal(data, productType) {
     addModalStyles();
     
     // Add close functionality
-    window.closeBenchmarkModal = function() {
+    const closeModal = () => {
         const modal = document.getElementById('benchmarkit-modal');
         if (modal) {
             modal.remove();
         }
     };
     
+    // Close button click
+    const closeBtn = modal.querySelector('#benchmarkit-close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+    
     // Close on overlay click
     modal.querySelector('.benchmarkit-modal-overlay').addEventListener('click', (e) => {
         if (e.target === e.currentTarget) {
-            window.closeBenchmarkModal();
+            closeModal();
         }
     });
     
     // Close on Escape key
-    document.addEventListener('keydown', function(e) {
+    const escapeHandler = (e) => {
         if (e.key === 'Escape') {
-            window.closeBenchmarkModal();
+            closeModal();
+            document.removeEventListener('keydown', escapeHandler);
         }
-    });
+    };
+    document.addEventListener('keydown', escapeHandler);
 }
 
 // Function to show error modal
@@ -148,7 +156,7 @@ function showErrorModal(message) {
                 <div class="benchmarkit-error-icon">⚠️</div>
                 <h3>Error</h3>
                 <p>${message}</p>
-                <button class="benchmarkit-btn benchmarkit-btn-primary" onclick="closeErrorModal()">OK</button>
+                <button class="benchmarkit-btn benchmarkit-btn-primary" id="benchmarkit-error-ok-btn">OK</button>
             </div>
         </div>
     `;
@@ -159,12 +167,34 @@ function showErrorModal(message) {
     addModalStyles();
     
     // Add close functionality
-    window.closeErrorModal = function() {
+    const closeErrorModal = () => {
         const modal = document.getElementById('benchmarkit-error-modal');
         if (modal) {
             modal.remove();
         }
     };
+    
+    // OK button click
+    const okBtn = modal.querySelector('#benchmarkit-error-ok-btn');
+    if (okBtn) {
+        okBtn.addEventListener('click', closeErrorModal);
+    }
+    
+    // Close on overlay click
+    modal.querySelector('.benchmarkit-modal-overlay').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            closeErrorModal();
+        }
+    });
+    
+    // Close on Escape key
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            closeErrorModal();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    };
+    document.addEventListener('keydown', escapeHandler);
 }
 
 // Function to add modal styles
