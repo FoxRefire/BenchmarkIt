@@ -15,7 +15,7 @@ async function showInfo(selectedStr, productType) {
         // Hide loading modal
         hideLoadingModal();
         
-        if (response && response.passmark) {
+        if (response && response.result) {
             showModernModal(response, productType);
         } else {
             showErrorModal('Benchmark data not found');
@@ -60,14 +60,14 @@ function showModernModal(data, productType) {
     modal.id = 'benchmarkit-modal';
     console.log('data:', data);
     
-    const productName = data.passmark.productName || 'Unknown Product';
-    const passmark = data.passmark || {};
-    const passmarkUrl = passmark.url || 'https://www.cpubenchmark.net/';
+    const productName = data.result.productName || 'Unknown Product';
+    const result = data.result || {};
+    const resultUrl = result.url || 'https://www.cpubenchmark.net/';
     
     let scoreContent = '';
     if (productType === 'cpu') {
-        const multiCore = passmark.multiCoreScore || 'N/A';
-        const singleCore = passmark.singleCoreScore || 'N/A';
+        const multiCore = result.multiCoreScore || 'N/A';
+        const singleCore = result.singleCoreScore || 'N/A';
         scoreContent = `
             <div class="benchmarkit-score-item">
                 <div class="benchmarkit-score-label">Multi-Core Score</div>
@@ -79,11 +79,34 @@ function showModernModal(data, productType) {
             </div>
         `;
     } else if (productType === 'gpu') {
-        const score = passmark.score || 'N/A';
+        const score = result.score || 'N/A';
         scoreContent = `
             <div class="benchmarkit-score-item">
                 <div class="benchmarkit-score-label">Benchmark Score</div>
                 <div class="benchmarkit-score-value">${score}</div>
+            </div>
+        `;
+    } else if (productType === 'mobile') {
+        const antutu = result.antutu || 'N/A';
+        const geekbench_s = result.geekbench_s || 'N/A';
+        const geekbench_m = result.geekbench_m || 'N/A';
+        const geekbench_g = result.geekbench_g || 'N/A';
+        scoreContent = `
+            <div class="benchmarkit-score-item">
+                <div class="benchmarkit-score-label">Antutu 11 Score</div>
+                <div class="benchmarkit-score-value">${antutu}</div>
+            </div>
+            <div class="benchmarkit-score-item">
+                <div class="benchmarkit-score-label">Geekbench 6 (Single-Core) Score</div>
+                <div class="benchmarkit-score-value">${geekbench_s}</div>
+            </div>
+            <div class="benchmarkit-score-item">
+                <div class="benchmarkit-score-label">Geekbench 6 (Multi-Core) Score</div>
+                <div class="benchmarkit-score-value">${geekbench_m}</div>
+            </div>
+            <div class="benchmarkit-score-item">
+                <div class="benchmarkit-score-label">Geekbench 6 (Graphics) Score</div>
+                <div class="benchmarkit-score-value">${geekbench_g}</div>
             </div>
         `;
     }
@@ -101,7 +124,7 @@ function showModernModal(data, productType) {
                         ${scoreContent}
                     </div>
                     <div class="benchmarkit-footer">
-                        <a href="${passmarkUrl}" target="_blank" class="benchmarkit-link">
+                        <a href="${resultUrl}" target="_blank" class="benchmarkit-link">
                             View Details on PassMark
                         </a>
                     </div>

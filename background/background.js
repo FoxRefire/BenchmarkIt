@@ -16,14 +16,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function getResult(text, productType) {
     text = normalizeText(text);
     if (productType === "cpu") {
-        let passmark = await getCPUPassmark(text);
+        let result = await getCPUPassmark(text);
         return {
-            passmark: passmark
+            result: result
         };
     } else if (productType === "gpu") {
-        let passmark = await getGPUPassmark(text);
+        let result = await getGPUPassmark(text);
         return {
-            passmark: passmark
+            result: result
+        };
+    } else if (productType === "mobile") {
+        let result = await getMobileNanoReview(text);
+        return {
+            result: result
         };
     }
 }
@@ -50,19 +55,28 @@ function normalizeText(text) {
 }
 
 async function getProductLinkByDDG(text, provider) {
-    const processRule = {
+    const searchQuery = {
         cpubenchmark: "cpu.php?cpu= site:www.cpubenchmark.net",
-        videocardbenchmark: "gpu.php?gpu= site:www.videocardbenchmark.net"
+        videocardbenchmark: "gpu.php?gpu= site:www.videocardbenchmark.net",
+        nanoreview: "site:nanoreview.net"
     }
-    return await extractFirstLinkFromDuckDuckGo(`${text} ${processRule[provider]}`);
-}
-
-async function extractFirstLinkFromDuckDuckGo(query) {
-    const url = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query);
-    const response = await fetch(url).then(response => response.text());
+    const filterQuery = {
+        cpubenchmark: "cpu.php?cpu=",
+        videocardbenchmark: "gpu.php?gpu=",
+        nanoreview: "/en/phone/"
+    }
+    const searchUrl = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(`${text} ${searchQuery[provider]}`);
+    const response = await fetch(searchUrl).then(response => response.text());
     const parser = new DOMParser();
     const doc = parser.parseFromString(response, "text/html");
-    return doc.querySelector("a.result__url")?.innerText;
+
+    const searchResults = doc.querySelectorAll("a.result__url")
+    for (let i = 0; i < 10; i++) {
+        const url = new URL(searchResults[i].href).searchParams.get("uddg");
+        if (url.includes(filterQuery[provider])) {
+            return url;
+        }
+    }
 }
 
 async function getCPUPassmark(text) {
@@ -70,8 +84,7 @@ async function getCPUPassmark(text) {
     url = "https://www.cpubenchmark.net/cpu.php?cpu=" + encodeURIComponent(text);
     response = await fetch(url);
     if (!response.ok) {
-        text = await getProductLinkByDDG(text, "cpubenchmark").then(u => u.match(/cpu\.php\?cpu=(.*)/)?.[1]);
-        url = `https://www.cpubenchmark.net/cpu.php?cpu=${text}`;
+        url = await getProductLinkByDDG(text, "cpubenchmark")
         response = await fetch(url);
     }
     response = await response.text();
@@ -115,4 +128,26 @@ async function findGpuIdFromGPUList(text) {
     console.log('foundGpu:', foundGpu);
     return new URL(foundGpu.href).searchParams.get("id");
 
+}
+
+async function getMobileNanoReview(text) {
+    let response, url;
+    url = await getProductLinkByDDG(text, "nanoreview")
+    console.log('url:', url);
+    response = await fetch(url).then(r => r.text());
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(response, "text/html");
+
+    let antutu = Array.from(doc.querySelectorAll(".score-bar")).filter(e => e?.querySelector(".score-bar-name")?.innerText.includes("AnTuTu Benchmark 11"))[0]
+    let geekbench_s = Array.from(doc.querySelectorAll(".score-bar")).filter(e => e?.querySelector(".score-bar-name")?.innerText.includes("Geekbench 6 (Single-Core)"))[0]
+    let geekbench_m = Array.from(doc.querySelectorAll(".score-bar")).filter(e => e?.querySelector(".score-bar-name")?.innerText.includes("Geekbench 6 (Multi-Core)"))[0]
+    let geekbench_g = Array.from(doc.querySelectorAll(".score-bar")).filter(e => e?.querySelector(".score-bar-name")?.innerText.includes("Compute Score (GPU)"))[0]
+    return {
+        productName: doc.querySelector(".title-h1")?.innerText,
+        antutu: antutu.querySelector(".score-bar-result-number")?.innerText,
+        geekbench_s: geekbench_s.querySelector(".score-bar-result-number")?.innerText,
+        geekbench_m: geekbench_m.querySelector(".score-bar-result-number")?.innerText,
+        geekbench_g: geekbench_g.querySelector(".score-bar-result-number")?.innerText,
+        url: url
+    };
 }
