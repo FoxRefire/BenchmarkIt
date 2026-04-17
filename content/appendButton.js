@@ -29,7 +29,9 @@ function showInfoIcon(selectedText, productType, selection) {
     `;
 
     let longPressTimer = null;
-    let suppressNextClick = false;
+    let longPressCompleted = false;
+    let pointerDownAt = 0;
+    let activePointerId = null;
 
     function clearLongPressTimer() {
         if (longPressTimer) {
@@ -50,46 +52,67 @@ function showInfoIcon(selectedText, productType, selection) {
 
     icon.addEventListener('pointerdown', (e) => {
         if (e.button !== 0) return;
+        activePointerId = e.pointerId;
+        pointerDownAt = e.timeStamp || performance.now();
+        longPressCompleted = false;
+        clearLongPressTimer();
         try {
             icon.setPointerCapture(e.pointerId);
         } catch (err) {
             /* ignore */
         }
-        suppressNextClick = false;
-        clearLongPressTimer();
         longPressTimer = setTimeout(() => {
             longPressTimer = null;
-            suppressNextClick = true;
+            longPressCompleted = true;
             addToCompareQueue(selectedText, productType);
             removeExistingIcon();
         }, LONG_PRESS_MS);
     });
 
-    function endLongPress(e) {
+    function finishPointer(e) {
+        if (e.pointerId != null && activePointerId != null && e.pointerId !== activePointerId) {
+            return;
+        }
         clearLongPressTimer();
-        if (e && e.pointerId != null) {
-            try {
-                if (icon.releasePointerCapture && icon.hasPointerCapture?.(e.pointerId)) {
-                    icon.releasePointerCapture(e.pointerId);
-                }
-            } catch (err) {
-                /* ignore */
+        try {
+            if (icon.hasPointerCapture?.(e.pointerId)) {
+                icon.releasePointerCapture(e.pointerId);
             }
+        } catch (err) {
+            /* ignore */
+        }
+        activePointerId = null;
+
+        if (longPressCompleted) {
+            return;
+        }
+
+        const start = pointerDownAt;
+        const end = e.timeStamp || performance.now();
+        if (end - start < LONG_PRESS_MS) {
+            e.preventDefault();
+            e.stopPropagation();
+            showInfo(selectedText, productType);
+            removeExistingIcon();
         }
     }
 
-    icon.addEventListener('pointerup', (e) => endLongPress(e));
-    icon.addEventListener('pointercancel', (e) => endLongPress(e));
+    icon.addEventListener('pointerup', (e) => finishPointer(e));
+    icon.addEventListener('pointercancel', (e) => {
+        clearLongPressTimer();
+        try {
+            if (icon.hasPointerCapture?.(e.pointerId)) {
+                icon.releasePointerCapture(e.pointerId);
+            }
+        } catch (err) {
+            /* ignore */
+        }
+        activePointerId = null;
+    });
 
     icon.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (suppressNextClick) {
-            suppressNextClick = false;
-            return;
-        }
-        showInfo(selectedText, productType);
-        removeExistingIcon();
     });
 
     const range = selection.getRangeAt(0);
