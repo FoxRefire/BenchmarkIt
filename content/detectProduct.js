@@ -33,6 +33,9 @@ const PRODUCT_PATTERNS = {
         // AMD patterns
         /amd\s+ryzen\s+\d+\s+\d+[a-z]*/i,
         /amd\s+ryzen\s+ai\s+\w+/i,
+        // Ryzen Threadripper (non-Pro), e.g. 3960X, 3970X
+        /amd\s+ryzen\s+threadripper\s+\d+[a-z]*/i,
+        /ryzen\s+threadripper\s+\d+[a-z]*/i,
         /amd\s+ryzen\s+threadripper\s+pro\s+\d+[a-z]*/i,
         /amd\s+epyc\s+\d+[a-z]*/i,
         /amd\s+athlon/i,
