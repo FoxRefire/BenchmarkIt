@@ -1,7 +1,7 @@
 {
     "name": "BenchmarkIt!",
     "description": "BenchmarkIt! is a browser extension to find CPU/GPU benchmark scores on the webpage.",
-    "version": "1.0",
+    "version": "2.0",
     "manifest_version": 3,
     "icons": {
         "128": "icon.png"
