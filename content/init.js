@@ -95,4 +95,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 loadSettings().then(() => {
     document.addEventListener('mouseup', handleTextSelection);
     document.addEventListener('keyup', handleTextSelection);
+    // Touch / Android: selection often completes without a synthetic mouseup; selectionchange covers that.
+    let selectionDebounce = null;
+    document.addEventListener('selectionchange', () => {
+        if (selectionDebounce) clearTimeout(selectionDebounce);
+        selectionDebounce = setTimeout(() => {
+            selectionDebounce = null;
+            handleTextSelection();
+        }, 80);
+    });
 });
