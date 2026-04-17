@@ -13,6 +13,9 @@ const PRODUCT_PATTERNS = {
         /intel\s+celeron/i,
         /intel\s+xeon/i,
         /intel\s+n\d+[a-z]*/i,
+        // Intel Core (numeric tier + model): Core 5 213PTE, Intel Core 9 273PTE
+        /intel\s+core\s+[3-9]\s+\d+[a-z]*/i,
+        /core\s+[3-9]\s+\d+[a-z]*/i,
         /core\s+i[3-9]\s+\d+[a-z]*/i,
         /core\s+i[3-9]\s+\d+[a-z]{1,3}/i,
         /core\s+ultra\s+\d+\s+\d+[a-z]*/i,
@@ -23,6 +26,8 @@ const PRODUCT_PATTERNS = {
         /celeron\s+g\d+/i,
         /xeon\s+e\d+/i,
         /xeon\s+w\d+/i,
+        // Xeon model numbers without E/W prefix (e.g. Xeon 6369P)
+        /xeon\s+\d+[a-z]*/i,
         /n\d+[a-z]*/i,
         
         // AMD patterns
@@ -134,7 +139,10 @@ const PRODUCT_PATTERNS = {
         /vivo\s+(x|y|v)\d+[a-z]*/i,
         /x\d+[a-z]*/i,
         /y\d+[a-z]*/i,
-        /v\d+[a-z]*/i
+        /v\d+[a-z]*/i,
+        
+        // realme
+        /realme\s+\w+/i
     ]
 };
 
