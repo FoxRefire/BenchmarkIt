@@ -27,6 +27,27 @@ async function showInfo(selectedStr, productType) {
     }
 }
 
+async function addToCompareQueue(selectedStr, productType) {
+    showLoadingModal();
+    try {
+        const response = await chrome.runtime.sendMessage({
+            action: 'addToCompare',
+            selectedStr: selectedStr,
+            productType: productType
+        });
+        hideLoadingModal();
+        if (response && response.ok) {
+            showToast('Added to comparison list');
+        } else {
+            showErrorModal(response && response.error ? response.error : 'Failed to add to comparison');
+        }
+    } catch (error) {
+        console.error(error);
+        hideLoadingModal();
+        showErrorModal('Failed to add to comparison');
+    }
+}
+
 // Function to show loading modal
 function showLoadingModal() {
     const modal = document.createElement('div');
@@ -124,8 +145,8 @@ function showModernModal(data, productType) {
                         ${scoreContent}
                     </div>
                     <div class="benchmarkit-footer">
-                        <a href="${resultUrl}" target="_blank" class="benchmarkit-link">
-                            View Details on PassMark
+                        <a href="${resultUrl}" target="_blank" rel="noopener noreferrer" class="benchmarkit-link">
+                            ${productType === 'mobile' ? 'View details on NanoReview' : 'View details on PassMark'}
                         </a>
                     </div>
                 </div>
@@ -219,6 +240,21 @@ function showErrorModal(message) {
         }
     };
     document.addEventListener('keydown', escapeHandler);
+}
+
+function showToast(message) {
+    addModalStyles();
+    const existing = document.getElementById('benchmarkit-toast');
+    if (existing) existing.remove();
+    const el = document.createElement('div');
+    el.id = 'benchmarkit-toast';
+    el.textContent = message;
+    el.setAttribute('role', 'status');
+    document.body.appendChild(el);
+    setTimeout(() => {
+        el.classList.add('benchmarkit-toast-out');
+        setTimeout(() => el.remove(), 280);
+    }, 2800);
 }
 
 // Function to add modal styles
@@ -417,6 +453,35 @@ function addModalStyles() {
             100% { transform: rotate(360deg); }
         }
         
+        #benchmarkit-toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100001;
+            background: #111827;
+            color: #f9fafb;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+            animation: benchmarkit-toast-in 0.25s ease-out;
+            max-width: min(90vw, 420px);
+            text-align: center;
+        }
+        #benchmarkit-toast.benchmarkit-toast-out {
+            animation: benchmarkit-toast-out 0.25s ease-in forwards;
+        }
+        @keyframes benchmarkit-toast-in {
+            from { opacity: 0; transform: translate(-50%, 8px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        @keyframes benchmarkit-toast-out {
+            from { opacity: 1; transform: translate(-50%, 0); }
+            to { opacity: 0; transform: translate(-50%, 8px); }
+        }
+
         @media (max-width: 480px) {
             .benchmarkit-modal-content {
                 width: 95%;

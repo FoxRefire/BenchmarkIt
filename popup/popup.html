@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BenchmarkIt!</title>
+    <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+    <div class="bi-shell">
+        <header class="bi-header">
+            <div class="bi-brand">
+                <span class="bi-logo" aria-hidden="true">◆</span>
+                <div>
+                    <div class="bi-title">BenchmarkIt!</div>
+                    <div class="bi-sub">Search insights at a glance</div>
+                </div>
+            </div>
+        </header>
+
+        <section class="bi-stats" id="bi-stats">
+            <div class="bi-stat">
+                <span class="bi-stat-label">CPU</span>
+                <span class="bi-stat-value" id="stat-cpu">0</span>
+            </div>
+            <div class="bi-stat">
+                <span class="bi-stat-label">GPU</span>
+                <span class="bi-stat-value" id="stat-gpu">0</span>
+            </div>
+            <div class="bi-stat">
+                <span class="bi-stat-label">Mobile</span>
+                <span class="bi-stat-value" id="stat-mobile">0</span>
+            </div>
+        </section>
+
+        <p class="bi-hint" id="bi-total">Total lookups recorded: <strong id="stat-total">0</strong></p>
+
+        <nav class="bi-nav" aria-label="BenchmarkIt links">
+            <button type="button" class="bi-link primary" id="open-history">
+                <span class="bi-link-title">Search history</span>
+                <span class="bi-link-desc">Detailed log of past lookups</span>
+            </button>
+            <button type="button" class="bi-link" id="open-compare">
+                <span class="bi-link-title">Comparison</span>
+                <span class="bi-link-desc">Side‑by‑side saved results</span>
+            </button>
+            <button type="button" class="bi-link" id="open-settings">
+                <span class="bi-link-title">Settings</span>
+                <span class="bi-link-desc">Auto icon, custom regex, reset</span>
+            </button>
+        </nav>
+    </div>
+    <script type="module" src="popup.js"></script>
+</body>
+</html>

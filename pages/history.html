@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BenchmarkIt! — Search history</title>
+    <link rel="stylesheet" href="page.css" />
+</head>
+<body>
+    <div class="p-wrap">
+        <div class="p-top">
+            <div>
+                <h1 class="p-title">Search history</h1>
+                <p class="p-sub">Locally stored lookups from successful benchmark searches.</p>
+            </div>
+            <div class="p-row">
+                <button type="button" class="p-btn" id="open-settings">Settings</button>
+                <button type="button" class="p-btn" id="open-compare">Comparison</button>
+                <button type="button" class="p-btn danger" id="clear-history">Clear history</button>
+            </div>
+        </div>
+
+        <div class="p-card">
+            <div id="history-empty" class="p-empty" hidden>No history yet. Select text on a page and open a benchmark.</div>
+            <div class="p-table-wrap" id="history-table-wrap" hidden>
+                <table class="p-table" aria-label="Search history">
+                    <thead>
+                        <tr>
+                            <th>When</th>
+                            <th>Type</th>
+                            <th>Query</th>
+                            <th>Product</th>
+                            <th>Link</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="history.js"></script>
+</body>
+</html>

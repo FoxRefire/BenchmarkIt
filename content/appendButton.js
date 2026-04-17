@@ -1,8 +1,9 @@
 // Function to create and show info icon
+const LONG_PRESS_MS = 550;
+
 function showInfoIcon(selectedText, productType, selection) {
-    // Remove existing icon if any
     removeExistingIcon();
-    
+
     const icon = document.createElement('div');
     icon.id = 'benchmarkit-info-icon';
     icon.innerHTML = 'ℹ️';
@@ -24,54 +25,86 @@ function showInfoIcon(selectedText, productType, selection) {
         transition: all 0.2s ease;
         user-select: none;
         pointer-events: auto;
+        touch-action: none;
     `;
-    
-    // Add hover effect
+
+    let longPressTimer = null;
+    let suppressNextClick = false;
+
+    function clearLongPressTimer() {
+        if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+        }
+    }
+
     icon.addEventListener('mouseenter', () => {
         icon.style.transform = 'scale(1.1)';
         icon.style.background = '#0056b3';
     });
-    
+
     icon.addEventListener('mouseleave', () => {
         icon.style.transform = 'scale(1)';
         icon.style.background = '#007bff';
     });
-    
-    // Add click handler
+
+    icon.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        try {
+            icon.setPointerCapture(e.pointerId);
+        } catch (err) {
+            /* ignore */
+        }
+        suppressNextClick = false;
+        clearLongPressTimer();
+        longPressTimer = setTimeout(() => {
+            longPressTimer = null;
+            suppressNextClick = true;
+            addToCompareQueue(selectedText, productType);
+            removeExistingIcon();
+        }, LONG_PRESS_MS);
+    });
+
+    function endLongPress(e) {
+        clearLongPressTimer();
+        if (e && e.pointerId != null) {
+            try {
+                if (icon.releasePointerCapture && icon.hasPointerCapture?.(e.pointerId)) {
+                    icon.releasePointerCapture(e.pointerId);
+                }
+            } catch (err) {
+                /* ignore */
+            }
+        }
+    }
+
+    icon.addEventListener('pointerup', (e) => endLongPress(e));
+    icon.addEventListener('pointercancel', (e) => endLongPress(e));
+
     icon.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('Icon clicked!', selectedText, productType);
+        if (suppressNextClick) {
+            suppressNextClick = false;
+            return;
+        }
         showInfo(selectedText, productType);
         removeExistingIcon();
     });
-    
-    // Add mousedown handler as backup
-    icon.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('Icon mousedown!', selectedText, productType);
-        showInfo(selectedText, productType);
-        removeExistingIcon();
-    });
-    
-    // Position the icon near the selection
+
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
-    
+
     icon.style.left = (rect.right + window.scrollX + 5) + 'px';
     icon.style.top = (rect.top + window.scrollY - 2) + 'px';
-    
+
     document.body.appendChild(icon);
-    console.log('Icon created and added to DOM:', icon);
-    
-    // Auto-hide after 5 seconds
+
     setTimeout(() => {
         removeExistingIcon();
     }, 5000);
 }
 
-// Function to remove existing icon
 function removeExistingIcon() {
     const existingIcon = document.getElementById('benchmarkit-info-icon');
     if (existingIcon) {

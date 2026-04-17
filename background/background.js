@@ -1,153 +1,212 @@
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if(chrome.offscreen) {
-        offscreenRun(request).then(d => sendResponse(d))
-    } else {
-        if (request.action === "getBenchmark") {
-            console.log('getBenchmark called with:', request.selectedStr, request.productType);
-            getResult(request.selectedStr, request.productType).then(result => {
-                console.log('getResult result:', result);
-                sendResponse(result);
-            });
-        }
+import { getResult } from './benchmark-core.js';
+
+const MENU_SEARCH = 'benchmarkit-search';
+const MENU_COMPARE = 'benchmarkit-compare';
+
+function isServiceWorkerGlobalScope() {
+    return typeof ServiceWorkerGlobalScope !== 'undefined' && self instanceof ServiceWorkerGlobalScope;
+}
+
+async function runBenchmarkFetch(request) {
+    if (chrome.offscreen && isServiceWorkerGlobalScope()) {
+        return offscreenRun(request);
     }
-    return true;
+    return getResult(request.selectedStr, request.productType);
+}
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'getBenchmark' && request._offscreenRelay) {
+        return false;
+    }
+
+    if (request.action === 'getBenchmark') {
+        runBenchmarkFetch(request)
+            .then(async (res) => {
+                if (res?.result) {
+                    await appendHistoryRecord(request, res.result);
+                }
+                sendResponse(res);
+            })
+            .catch((e) => {
+                console.error(e);
+                sendResponse({ result: null, error: String(e) });
+            });
+        return true;
+    }
+
+    if (request.action === 'addToCompare') {
+        handleAddToCompare(request)
+            .then(sendResponse)
+            .catch((e) => sendResponse({ ok: false, error: String(e) }));
+        return true;
+    }
+
+    if (request.action === 'GET_STATS') {
+        getStats().then(sendResponse);
+        return true;
+    }
+
+    if (request.action === 'RESET_ALL') {
+        resetAllStorage().then(() => sendResponse({ ok: true })).catch((e) => sendResponse({ ok: false, error: String(e) }));
+        return true;
+    }
+
+    if (request.action === 'REMOVE_COMPARE_ITEM') {
+        removeCompareItem(request.id).then(() => sendResponse({ ok: true })).catch((e) => sendResponse({ ok: false }));
+        return true;
+    }
+
+    if (request.action === 'CLEAR_COMPARE') {
+        chrome.storage.local.set({ compareItems: [] }).then(() => sendResponse({ ok: true }));
+        return true;
+    }
+
+    return false;
 });
 
-async function getResult(text, productType) {
-    text = normalizeText(text);
-    if (productType === "cpu") {
-        let result = await getCPUPassmark(text);
-        return {
-            result: result
-        };
-    } else if (productType === "gpu") {
-        let result = await getGPUPassmark(text);
-        return {
-            result: result
-        };
-    } else if (productType === "mobile") {
-        let result = await getMobileNanoReview(text);
-        return {
-            result: result
-        };
+async function appendHistoryRecord(request, result) {
+    const { history = [] } = await chrome.storage.local.get('history');
+    const entry = {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
+        ts: Date.now(),
+        query: request.selectedStr,
+        productType: request.productType,
+        productName: result?.productName || request.selectedStr,
+        url: result?.url
+    };
+    history.unshift(entry);
+    await chrome.storage.local.set({ history: history.slice(0, 500) });
+}
+
+async function handleAddToCompare(request) {
+    const res = await runBenchmarkFetch({
+        action: 'getBenchmark',
+        selectedStr: request.selectedStr,
+        productType: request.productType
+    });
+    if (!res?.result) {
+        return { ok: false, error: 'Benchmark data not found' };
     }
+    const { compareItems = [] } = await chrome.storage.local.get('compareItems');
+    const item = {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        ts: Date.now(),
+        query: request.selectedStr,
+        productType: request.productType,
+        result: res.result
+    };
+    compareItems.unshift(item);
+    await chrome.storage.local.set({ compareItems: compareItems.slice(0, 8) });
+    return { ok: true };
+}
+
+async function getStats() {
+    const { history = [] } = await chrome.storage.local.get('history');
+    const counts = { cpu: 0, gpu: 0, mobile: 0 };
+    for (const h of history) {
+        if (counts[h.productType] !== undefined) {
+            counts[h.productType]++;
+        }
+    }
+    return { counts, total: history.length };
+}
+
+async function resetAllStorage() {
+    await chrome.storage.local.set({
+        history: [],
+        compareItems: [],
+        settings: {
+            autoIconEnabled: true,
+            customIconRegex: '',
+            customMatchProductType: 'cpu'
+        }
+    });
+}
+
+async function removeCompareItem(id) {
+    const { compareItems = [] } = await chrome.storage.local.get('compareItems');
+    await chrome.storage.local.set({
+        compareItems: compareItems.filter((x) => x.id !== id)
+    });
 }
 
 async function offscreenRun(request) {
     await chrome.offscreen.createDocument({
-        url: '/background/offscreen.html',
+        url: chrome.runtime.getURL('background/offscreen.html'),
         reasons: ['WORKERS'],
         justification: 'Workaround of using the DOM on Chromium service worker'
-    })
-    let result = await chrome.runtime.sendMessage(request)
-    await chrome.offscreen.closeDocument()
-    return result
-}
-
-// Function to normalize text for better matching
-function normalizeText(text) {
-    return text
-        .toLowerCase()
-        .replace(/[™®©]/g, '') // Remove trademark symbols
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .replace(/[_]/g, ' ') // Replace underscores with spaces (keep hyphens for processor names)
-        .trim();
-}
-
-async function getProductLinkByDDG(text, provider) {
-    const searchQuery = {
-        cpubenchmark: "cpu.php?cpu= site:www.cpubenchmark.net",
-        videocardbenchmark: "gpu.php?gpu= site:www.videocardbenchmark.net",
-        nanoreview: "site:nanoreview.net"
-    }
-    const filterQuery = {
-        cpubenchmark: "cpu.php?cpu=",
-        videocardbenchmark: "gpu.php?gpu=",
-        nanoreview: "/en/phone/"
-    }
-    const searchUrl = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(`${text} ${searchQuery[provider]}`);
-    const response = await fetch(searchUrl).then(response => response.text());
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(response, "text/html");
-
-    const searchResults = doc.querySelectorAll("a.result__url")
-    for (let i = 0; i < 10; i++) {
-        const url = new URL(searchResults[i].href).searchParams.get("uddg");
-        if (url.includes(filterQuery[provider])) {
-            return url;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 75));
+    let result;
+    try {
+        result = await chrome.runtime.sendMessage({
+            action: 'getBenchmark',
+            selectedStr: request.selectedStr,
+            productType: request.productType,
+            _offscreenRelay: true
+        });
+    } finally {
+        try {
+            await chrome.offscreen.closeDocument();
+        } catch (e) {
+            /* ignore */
         }
     }
+    return result;
 }
 
-async function getCPUPassmark(text) {
-    let response, url;
-    url = "https://www.cpubenchmark.net/cpu.php?cpu=" + encodeURIComponent(text);
-    response = await fetch(url);
-    if (!response.ok) {
-        url = await getProductLinkByDDG(text, "cpubenchmark")
-        response = await fetch(url);
+function setupContextMenus() {
+    if (!chrome.contextMenus) return;
+    chrome.contextMenus.removeAll(() => {
+        chrome.contextMenus.create({
+            id: MENU_SEARCH,
+            title: 'Search benchmark with BenchmarkIt!',
+            contexts: ['selection']
+        });
+        chrome.contextMenus.create({
+            id: MENU_COMPARE,
+            title: 'Add selection to BenchmarkIt comparison',
+            contexts: ['selection']
+        });
+    });
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+    setupContextMenus();
+    ensureDefaultSettings();
+});
+
+if (chrome.runtime.onStartup) {
+    chrome.runtime.onStartup.addListener(() => {
+        setupContextMenus();
+    });
+}
+
+setupContextMenus();
+ensureDefaultSettings();
+
+async function ensureDefaultSettings() {
+    const { settings } = await chrome.storage.local.get('settings');
+    if (!settings) {
+        await chrome.storage.local.set({
+            settings: {
+                autoIconEnabled: true,
+                customIconRegex: '',
+                customMatchProductType: 'cpu'
+            }
+        });
     }
-    response = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(response, "text/html");
-    return {
-        productName: doc.querySelector("div.productheader h1")?.innerText,
-        multiCoreScore: doc.querySelector("div.right-desc > div:nth-child(3)")?.innerText,
-        singleCoreScore: doc.querySelector("div.right-desc > div:nth-child(5)")?.innerText,
-        url: url
-    };
 }
 
-async function getGPUPassmark(text) {
-    let response, url;
-    url = "https://www.videocardbenchmark.net/gpu.php?gpu=" + encodeURIComponent(text);
-    response = await fetch(url);
-
-    if (!response.ok || !response.url.includes("gpu.php")) {
-        let gpuId = await findGpuIdFromGPUList(text);
-        url = `https://www.videocardbenchmark.net/gpu.php?id=${gpuId}`;
-        response = await fetch(url);
+if (chrome.contextMenus && chrome.contextMenus.onClicked) {
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    const text = (info.selectionText || '').trim();
+    if (!text || !tab?.id) return;
+    if (info.menuItemId === MENU_SEARCH) {
+        chrome.tabs.sendMessage(tab.id, { action: 'contextSearch', text }).catch(() => {});
     }
-    response = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(response, "text/html");
-    return {
-        productName: doc.querySelector(".main-cmps-head h1")?.innerText,
-        score: doc.querySelector("div.right-desc > span:nth-child(3)")?.innerText,
-        url: url
-    };
-}
-
-async function findGpuIdFromGPUList(text) {
-    let response = await fetch("https://www.videocardbenchmark.net/gpu_list.php").then(r => r.text());
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(response, "text/html");
-    const allGPUs = Array.from(doc.querySelectorAll("#cputable td:nth-child(1) a"));
-    console.log('allGPUs:', allGPUs);
-    const foundGpu = allGPUs.find(gpu => normalizeText(gpu.innerText).includes(text));
-    console.log('foundGpu:', foundGpu);
-    return new URL(foundGpu.href).searchParams.get("id");
-
-}
-
-async function getMobileNanoReview(text) {
-    let response, url;
-    url = await getProductLinkByDDG(text, "nanoreview")
-    console.log('url:', url);
-    response = await fetch(url).then(r => r.text());
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(response, "text/html");
-
-    let antutu = Array.from(doc.querySelectorAll(".score-bar")).filter(e => e?.querySelector(".score-bar-name")?.innerText.includes("AnTuTu Benchmark 11"))[0]
-    let geekbench_s = Array.from(doc.querySelectorAll(".score-bar")).filter(e => e?.querySelector(".score-bar-name")?.innerText.includes("Geekbench 6 (Single-Core)"))[0]
-    let geekbench_m = Array.from(doc.querySelectorAll(".score-bar")).filter(e => e?.querySelector(".score-bar-name")?.innerText.includes("Geekbench 6 (Multi-Core)"))[0]
-    let geekbench_g = Array.from(doc.querySelectorAll(".score-bar")).filter(e => e?.querySelector(".score-bar-name")?.innerText.includes("Compute Score (GPU)"))[0]
-    return {
-        productName: doc.querySelector(".title-h1")?.innerText,
-        antutu: antutu.querySelector(".score-bar-result-number")?.innerText,
-        geekbench_s: geekbench_s.querySelector(".score-bar-result-number")?.innerText,
-        geekbench_m: geekbench_m.querySelector(".score-bar-result-number")?.innerText,
-        geekbench_g: geekbench_g.querySelector(".score-bar-result-number")?.innerText,
-        url: url
-    };
+    if (info.menuItemId === MENU_COMPARE) {
+        chrome.tabs.sendMessage(tab.id, { action: 'contextAddCompare', text }).catch(() => {});
+    }
+});
 }

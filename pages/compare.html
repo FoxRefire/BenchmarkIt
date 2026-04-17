@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BenchmarkIt! — Comparison</title>
+    <link rel="stylesheet" href="page.css" />
+</head>
+<body>
+    <div class="p-wrap">
+        <div class="p-top">
+            <div>
+                <h1 class="p-title">Comparison</h1>
+                <p class="p-sub">Up to 8 items. Use the context menu on a page to add the current selection.</p>
+            </div>
+            <div class="p-row">
+                <button type="button" class="p-btn" id="open-history">History</button>
+                <button type="button" class="p-btn" id="open-settings">Settings</button>
+                <button type="button" class="p-btn danger" id="clear-compare">Clear all</button>
+            </div>
+        </div>
+
+        <div id="compare-empty" class="p-empty">
+            No comparison items yet. Right‑click a selected product name and choose <strong>Add selection to BenchmarkIt comparison</strong>.
+        </div>
+
+        <div class="p-grid" id="compare-grid" hidden></div>
+    </div>
+    <script type="module" src="compare.js"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BenchmarkIt! — Settings</title>
+    <link rel="stylesheet" href="page.css" />
+</head>
+<body>
+    <div class="p-wrap">
+        <div class="p-top">
+            <div>
+                <h1 class="p-title">Settings</h1>
+                <p class="p-sub">Control the automatic ℹ️ icon, optional custom matching, and reset local data.</p>
+            </div>
+        </div>
+
+        <div class="p-card" style="margin-bottom: 14px;">
+            <div class="p-check">
+                <input type="checkbox" id="auto-icon" />
+                <label for="auto-icon"><strong>Show ℹ️ automatically on selection</strong></label>
+            </div>
+            <p class="p-help">When enabled, BenchmarkIt shows the info icon when a supported product name is selected (built‑in patterns and optional custom regex).</p>
+        </div>
+
+        <div class="p-card" style="margin-bottom: 14px;">
+            <label class="p-label" for="custom-regex">Custom regex for ℹ️ (optional)</label>
+            <input class="p-field" id="custom-regex" type="text" placeholder="Example: my‑cpu\\s+\\d+" autocomplete="off" />
+            <p class="p-help">If built‑in detection fails but this regex matches the selected text, the icon appears. Leave empty to disable.</p>
+
+            <label class="p-label" for="custom-type" style="margin-top: 14px;">Product type when custom regex matches</label>
+            <select class="p-field" id="custom-type">
+                <option value="cpu">CPU</option>
+                <option value="gpu">GPU</option>
+                <option value="mobile">Mobile</option>
+            </select>
+        </div>
+
+        <div class="p-card">
+            <label class="p-label">Danger zone</label>
+            <div class="p-row" style="margin-top: 10px;">
+                <button type="button" class="p-btn danger" id="reset-all">Reset history &amp; settings</button>
+            </div>
+            <p class="p-help">Clears search history, comparison list, and restores default settings.</p>
+        </div>
+    </div>
+    <script type="module" src="options.js"></script>
+</body>
+</html>
